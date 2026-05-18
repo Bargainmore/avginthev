@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dashboard – MyApp</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <!-- ───────────────────────────────────────────────
+       REPLACE THE VALUE BELOW WITH YOUR OWN API KEY
+       Get one free at: https://console.cloud.google.com
+  ─────────────────────────────────────────────────── -->
+  <script>
+    const GOOGLE_MAPS_API_KEY = "YOUR_GOOGLE_MAPS_API_KEY";
+  </script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0b0f1a;
+      --sidebar: #0f1525;
+      --card: #141929;
+      --border: #1e2a42;
+      --accent: #4f8ef7;
+      --accent2: #7c3aed;
+      --text: #e8edf5;
+      --muted: #7a8499;
+      --green: #22c55e;
+      --radius: 14px;
+    }
+
+    body {
+      font-family: 'Sora', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+    }
+
+    /* ── SIDEBAR ── */
+    .sidebar {
+      width: 240px;
+      min-height: 100vh;
+      background: var(--sidebar);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      padding: 28px 0;
+      flex-shrink: 0;
+    }
+
+    .logo {
+      display: flex; align-items: center; gap: 10px;
+      padding: 0 24px 32px;
+    }
+    .logo-icon {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 9px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+    }
+    .logo-text { font-weight: 700; font-size: 1.1rem; letter-spacing: -0.4px; }
+
+    .nav-section { padding: 0 12px; margin-bottom: 8px; }
+    .nav-label {
+      font-size: 0.68rem; font-weight: 600;
+      color: var(--muted); letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 0 12px; margin-bottom: 6px;
+    }
+
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px; border-radius: 9px;
+      color: var(--muted); font-size: 0.875rem; font-weight: 500;
+      cursor: pointer; transition: all 0.15s; text-decoration: none;
+      margin-bottom: 2px;
+    }
+    .nav-item:hover { background: var(--border); color: var(--text); }
+    .nav-item.active { background: rgba(79,142,247,0.12); color: var(--accent); }
+    .nav-item .icon { font-size: 1rem; width: 20px; text-align: center; }
+
+    .sidebar-footer { margin-top: auto; padding: 0 12px; border-top: 1px solid var(--border); padding-top: 20px; }
+    .user-chip {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px; border-radius: 9px;
+      background: var(--card); border: 1px solid var(--border);
+    }
+    .avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.8rem; font-weight: 700; color: #fff; flex-shrink: 0;
+    }
+    .user-info { flex: 1; min-width: 0; }
+    .user-name { font-size: 0.8rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .user-role { font-size: 0.7rem; color: var(--muted); }
+
+    /* ── MAIN ── */
+    .main {
+      flex: 1;
+      overflow-y: auto;
+      padding: 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .page-header { display: flex; align-items: center; justify-content: space-between; }
+    .page-title { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.5px; }
+    .badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(34,197,94,0.12); color: var(--green);
+      padding: 5px 12px; border-radius: 99px; font-size: 0.78rem; font-weight: 600;
+      border: 1px solid rgba(34,197,94,0.25);
+    }
+    .badge::before { content: ''; width: 7px; height: 7px; background: var(--green); border-radius: 50%; }
+
+    /* ── STATS ROW ── */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+    }
+    .stat-label { font-size: 0.78rem; color: var(--muted); font-weight: 500; margin-bottom: 8px; }
+    .stat-value { font-size: 1.8rem; font-weight: 700; letter-spacing: -1px; }
+    .stat-sub { font-size: 0.75rem; color: var(--muted); margin-top: 4px; }
+    .stat-up { color: var(--green); }
+
+    /* ── TWO COLUMN GRID ── */
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .panel-header {
+      padding: 18px 20px 14px;
+      display: flex; align-items: center; justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+    }
+    .panel-title { font-weight: 600; font-size: 0.95rem; }
+    .panel-action { font-size: 0.78rem; color: var(--accent); cursor: pointer; text-decoration: none; }
+
+    /* ── MAP ── */
+    .map-wrapper { height: 340px; position: relative; }
+    #map { width: 100%; height: 100%; }
+
+    /* Fallback if no API key */
+    .map-placeholder {
+      width: 100%; height: 100%;
+      background: linear-gradient(135deg, #0f1e3a 0%, #1a2b4a 50%, #0d1b32 100%);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 14px;
+    }
+    .map-placeholder .globe { font-size: 3rem; animation: spin 10s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .map-placeholder p { color: var(--muted); font-size: 0.85rem; text-align: center; max-width: 220px; line-height: 1.5; }
+    .map-placeholder a { color: var(--accent); font-size: 0.8rem; }
+
+    .map-controls {
+      position: absolute;
+      bottom: 14px; left: 50%;
+      transform: translateX(-50%);
+      display: flex; gap: 8px;
+      background: rgba(10,15,26,0.85);
+      border: 1px solid var(--border);
+      border-radius: 99px;
+      padding: 6px 10px;
+      backdrop-filter: blur(8px);
+    }
+    .map-pin-btn {
+      background: transparent; border: none; color: var(--text);
+      font-size: 0.78rem; padding: 5px 12px; border-radius: 99px;
+      cursor: pointer; font-family: inherit; font-weight: 500;
+      transition: background 0.15s;
+    }
+    .map-pin-btn:hover, .map-pin-btn.active { background: var(--accent); color: #fff; }
+
+    /* ── YOUTUBE ── */
+    .video-wrapper {
+      position: relative;
+      padding-bottom: 56.25%; /* 16:9 */
+      height: 0;
+    }
+    .video-wrapper iframe {
+      position: absolute; top: 0; left: 0;
+      width: 100%; height: 100%;
+      border: none;
+    }
+    .video-meta {
+      padding: 14px 20px;
+      border-top: 1px solid var(--border);
+      display: flex; align-items: center; gap: 12px;
+    }
+    .yt-icon { color: #ff0000; font-size: 1.2rem; }
+    .video-title { font-size: 0.85rem; font-weight: 600; }
+    .video-channel { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
+
+    /* ── ACTIVITY ── */
+    .activity-list { padding: 8px 0; }
+    .activity-item {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.15s;
+    }
+    .activity-item:last-child { border-bottom: none; }
+    .activity-item:hover { background: rgba(255,255,255,0.02); }
+    .act-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      margin-top: 5px; flex-shrink: 0;
+    }
+    .act-text { font-size: 0.83rem; line-height: 1.4; flex: 1; }
+    .act-time { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 960px) {
+      .sidebar { display: none; }
+      .two-col { grid-template-columns: 1fr; }
+      .stats { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 600px) {
+      .main { padding: 16px; }
+      .stats { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── SIDEBAR ── -->
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-icon">🌐</div>
+    <span class="logo-text">MyApp</span>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-label">Menu</div>
+    <a href="#" class="nav-item active"><span class="icon">📊</span> Dashboard</a>
+    <a href="#" class="nav-item"><span class="icon">🗺️</span> Map View</a>
+    <a href="#" class="nav-item"><span class="icon">🎬</span> Videos</a>
+    <a href="#" class="nav-item"><span class="icon">📂</span> Projects</a>
+    <a href="#" class="nav-item"><span class="icon">💬</span> Messages</a>
+  </div>
+
+  <div class="nav-section" style="margin-top: 8px;">
+    <div class="nav-label">System</div>
+    <a href="#" class="nav-item"><span class="icon">⚙️</span> Settings</a>
+    <a href="login.html" class="nav-item"><span class="icon">🚪</span> Sign Out</a>
+  </div>
+
+  <div class="sidebar-footer">
+    <div class="user-chip">
+      <div class="avatar">JD</div>
+      <div class="user-info">
+        <div class="user-name">Jane Doe</div>
+        <div class="user-role">Administrator</div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- ── MAIN ── -->
+<main class="main">
+
+  <!-- Header -->
+  <div class="page-header">
+    <div>
+      <div class="page-title">Dashboard</div>
+    </div>
+    <div class="badge">Live</div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats">
+    <div class="stat-card">
+      <div class="stat-label">Total Users</div>
+      <div class="stat-value">12,480</div>
+      <div class="stat-sub stat-up">↑ 8.2% this month</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Locations Tracked</div>
+      <div class="stat-value">3</div>
+      <div class="stat-sub">Active map pins</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Videos Watched</div>
+      <div class="stat-value">924</div>
+      <div class="stat-sub stat-up">↑ 3.1% this week</div>
+    </div>
+  </div>
+
+  <!-- Map + YouTube -->
+  <div class="two-col">
+
+    <!-- MAP PANEL -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">🗺️ Google Maps</span>
+        <a href="#" class="panel-action">Open full map →</a>
+      </div>
+      <div class="map-wrapper">
+        <div id="map"></div>
+        <!-- Shown only if Google Maps fails to load -->
+        <div class="map-placeholder" id="map-fallback" style="display:none;">
+          <div class="globe">🌍</div>
+          <p>Add your Google Maps API key in the <code>&lt;script&gt;</code> block at the top of this file.</p>
+          <a href="https://console.cloud.google.com/apis/library/maps-javascript.googleapis.com" target="_blank">Get a free key →</a>
+        </div>
+        <div class="map-controls" id="map-controls" style="display:none;">
+          <button class="map-pin-btn active" onclick="panTo('headquarters')">HQ</button>
+          <button class="map-pin-btn" onclick="panTo('office2')">Office 2</button>
+          <button class="map-pin-btn" onclick="panTo('warehouse')">Warehouse</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIDEO PANEL -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">🎬 Featured Video</span>
+        <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ" target="_blank" class="panel-action">Open YouTube →</a>
+      </div>
+
+      <!-- 
+        ══════════════════════════════════════════════
+        HOW TO CHANGE THE VIDEO:
+        1. Go to any YouTube video
+        2. Click Share → Embed
+        3. Copy the 11-character VIDEO_ID from the URL
+           e.g. https://www.youtube.com/watch?v=VIDEO_ID
+        4. Replace "dQw4w9WgXcQ" below with your VIDEO_ID
+        ══════════════════════════════════════════════
+      -->
+      <div class="video-wrapper">
+        <iframe
+          src="https://www.youtube.com/embed/dQw4w9WgXcQ?rel=0&modestbranding=1"
+          title="YouTube video player"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowfullscreen>
+        </iframe>
+      </div>
+      <div class="video-meta">
+        <span class="yt-icon">▶</span>
+        <div>
+          <div class="video-title">Your featured video title here</div>
+          <div class="video-channel">Channel Name · YouTube</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /two-col -->
+
+  <!-- Recent Activity -->
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-title">Recent Activity</span>
+      <a href="#" class="panel-action">View all</a>
+    </div>
+    <div class="activity-list">
+      <div class="activity-item">
+        <div class="act-dot" style="background:#4f8ef7"></div>
+        <div>
+          <div class="act-text">New user <strong>Alex Kim</strong> registered</div>
+          <div class="act-time">2 minutes ago</div>
+        </div>
+      </div>
+      <div class="activity-item">
+        <div class="act-dot" style="background:#22c55e"></div>
+        <div>
+          <div class="act-text">Map pin <strong>Warehouse</strong> was updated</div>
+          <div class="act-time">14 minutes ago</div>
+        </div>
+      </div>
+      <div class="activity-item">
+        <div class="act-dot" style="background:#f59e0b"></div>
+        <div>
+          <div class="act-text">Video playlist <strong>Onboarding Series</strong> published</div>
+          <div class="act-time">1 hour ago</div>
+        </div>
+      </div>
+      <div class="activity-item">
+        <div class="act-dot" style="background:#7c3aed"></div>
+        <div>
+          <div class="act-text"><strong>Jane Doe</strong> signed in from Yogyakarta</div>
+          <div class="act-time">Just now</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main><!-- /main -->
+
+<!-- ── GOOGLE MAPS SCRIPT ── -->
+<script>
+  // Sample locations
+  const locations = {
+    headquarters: { lat: -7.7956, lng: 110.3695, label: 'HQ – Yogyakarta' },
+    office2:      { lat: -7.8014, lng: 110.3644, label: 'Office 2'         },
+    warehouse:    { lat: -7.7900, lng: 110.3800, label: 'Warehouse'        },
+  };
+
+  let map, markers = [];
+
+  function initMap() {
+    map = new google.maps.Map(document.getElementById('map'), {
+      center: locations.headquarters,
+      zoom: 14,
+      styles: [
+        { elementType: 'geometry',         stylers: [{ color: '#0d1b33' }] },
+        { elementType: 'labels.text.fill', stylers: [{ color: '#8ca0c4' }] },
+        { elementType: 'labels.text.stroke', stylers: [{ color: '#0d1b33' }] },
+        { featureType: 'road',             elementType: 'geometry', stylers: [{ color: '#1a2b4a' }] },
+        { featureType: 'water',            elementType: 'geometry', stylers: [{ color: '#06111f' }] },
+        { featureType: 'poi',              stylers: [{ visibility: 'off' }] },
+      ],
+    });
+
+    // Add markers
+    Object.values(locations).forEach(loc => {
+      const m = new google.maps.Marker({
+        position: { lat: loc.lat, lng: loc.lng },
+        map,
+        title: loc.label,
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 9,
+          fillColor: '#4f8ef7',
+          fillOpacity: 1,
+          strokeColor: '#fff',
+          strokeWeight: 2,
+        }
+      });
+      new google.maps.InfoWindow({ content: `<div style="color:#000;font-family:Sora,sans-serif;font-size:13px;font-weight:600">${loc.label}</div>` }).open(map, m);
+      markers.push({ key: Object.keys(locations).find(k => locations[k] === loc), marker: m });
+    });
+
+    document.getElementById('map-controls').style.display = 'flex';
+  }
+
+  function panTo(key) {
+    if (!map) return;
+    map.panTo(locations[key]);
+    map.setZoom(15);
+    document.querySelectorAll('.map-pin-btn').forEach(b => b.classList.remove('active'));
+    event.target.classList.add('active');
+  }
+
+  // Load Maps API dynamically
+  function loadMapsAPI() {
+    if (GOOGLE_MAPS_API_KEY === 'YOUR_GOOGLE_MAPS_API_KEY') {
+      document.getElementById('map-fallback').style.display = 'flex';
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&callback=initMap`;
+    script.async = true;
+    script.onerror = () => {
+      document.getElementById('map-fallback').style.display = 'flex';
+    };
+    document.head.appendChild(script);
+  }
+
+  loadMapsAPI();
+</script>
+
+</body>
+</html>
